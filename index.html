@@ -58,7 +58,7 @@ async function login(username, password) {
   if (res.ok && data.token) {
     localStorage.setItem('jwt_token', data.token);
     alert('Login sukses!');
-    location.href = '/dashboard'; // sesuaikan
+    location.href = 'dashboard.html'; // sesuaikan
   } else {
     alert(data.message || 'Login gagal');
   }

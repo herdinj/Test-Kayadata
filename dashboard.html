@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Affiliate</title>
+  <style>
+    body { font-family: sans-serif; background: #f9f9f9; padding: 20px; }
+    h1 { margin-bottom: 20px; }
+    table { border-collapse: collapse; width: 100%; margin-bottom: 40px; background: #fff; }
+    th, td { padding: 12px 15px; border: 1px solid #ddd; text-align: left; }
+    th { background-color: #f2f2f2; }
+    .badge { padding: 4px 10px; border-radius: 5px; font-size: 12px; color: white; }
+    .pending { background-color: orange; }
+    .added { background-color: green; }
+    .paid { background-color: blue; }
+    .unpaid { background-color: red; }
+  </style>
+</head>
+<body>
+  <h1>Dashboard Affiliate</h1>
+
+  <h2>Komisi</h2>
+  <table id="commission-table">
+    <thead>
+      <tr>
+        <th>Order ID</th>
+        <th>Tanggal</th>
+        <th>Komisi</th>
+        <th>Status</th>
+        <th>Pembayaran</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <h2>Lisensi</h2>
+  <table id="license-table">
+    <thead>
+      <tr>
+        <th>Kode</th>
+        <th>Tanggal</th>
+        <th>Status</th>
+        <th>Order ID</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    const affiliateApi = 'https://member.kayadata.id/wp-json/sejoli/v1/affiliates';
+    const licenseApi = 'https://member.kayadata.id/wp-json/sejoli/v1/licenses';
+
+    async function loadData() {
+      const [affRes, licRes] = await Promise.all([
+        fetch(affiliateApi),
+        fetch(licenseApi)
+      ]);
+
+      const affData = await affRes.json();
+      const licData = await licRes.json();
+
+      if (affData.success) renderCommission(affData.data);
+      if (licData.success) renderLicenses(licData.data);
+    }
+
+    function renderCommission(data) {
+      const tbody = document.querySelector('#commission-table tbody');
+      tbody.innerHTML = '';
+      data.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>#${row.order_id}</td>
+          <td>${row.created_at}</td>
+          <td>Rp ${parseFloat(row.commission).toLocaleString('id-ID')}</td>
+          <td><span class="badge ${row.status}">${row.status}</span></td>
+          <td><span class="badge ${row.paid_status === '1' ? 'paid' : 'unpaid'}">${row.paid_status === '1' ? 'Lunas' : 'Belum Lunas'}</span></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderLicenses(data) {
+      const tbody = document.querySelector('#license-table tbody');
+      tbody.innerHTML = '';
+      data.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${row.code}</td>
+          <td>${row.created_at}</td>
+          <td><span class="badge ${row.status}">${row.status}</span></td>
+          <td>#${row.order_id}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    loadData();
+  </script>
+</body>
+</html>
