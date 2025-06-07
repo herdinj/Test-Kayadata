@@ -1,67 +1,90 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
   <title>Dashboard Affiliate</title>
   <style>
-    body { font-family: sans-serif; background: #f9f9f9; padding: 20px; }
-    h1 { margin-bottom: 20px; }
-    table { border-collapse: collapse; width: 100%; margin-bottom: 40px; background: #fff; }
-    th, td { padding: 12px 15px; border: 1px solid #ddd; text-align: left; }
-    th { background-color: #f2f2f2; }
-    .badge { padding: 4px 10px; border-radius: 5px; font-size: 12px; color: white; }
+    body { font-family: sans-serif; background: #f4f4f4; padding: 20px; }
+    h1, h2 { margin-top: 30px; }
+    table { width: 100%; border-collapse: collapse; background: #fff; margin-top: 10px; }
+    th, td { padding: 10px; border: 1px solid #ddd; }
+    th { background: #eee; }
+    .badge { padding: 5px 10px; border-radius: 4px; color: white; font-size: 12px; }
     .pending { background-color: orange; }
     .added { background-color: green; }
     .paid { background-color: blue; }
     .unpaid { background-color: red; }
+    .active { background-color: green; }
+    .expired { background-color: gray; }
   </style>
 </head>
 <body>
   <h1>Dashboard Affiliate</h1>
 
-  <h2>Komisi</h2>
-  <table id="commission-table">
-    <thead>
-      <tr>
-        <th>Order ID</th>
-        <th>Tanggal</th>
-        <th>Komisi</th>
-        <th>Status</th>
-        <th>Pembayaran</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+  <div id="not-logged-in" style="display:none;">
+    <p>Silakan login terlebih dahulu untuk mengakses dashboard.</p>
+    <a href="/login.html">Ke Halaman Login</a>
+  </div>
 
-  <h2>Lisensi</h2>
-  <table id="license-table">
-    <thead>
-      <tr>
-        <th>Kode</th>
-        <th>Tanggal</th>
-        <th>Status</th>
-        <th>Order ID</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+  <div id="dashboard" style="display:none;">
+    <h2>Komisi</h2>
+    <table id="commission-table">
+      <thead>
+        <tr>
+          <th>Order ID</th>
+          <th>Tanggal</th>
+          <th>Komisi</th>
+          <th>Status</th>
+          <th>Pembayaran</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <h2>Lisensi</h2>
+    <table id="license-table">
+      <thead>
+        <tr>
+          <th>Kode</th>
+          <th>Tanggal</th>
+          <th>Status</th>
+          <th>Order ID</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
 
   <script>
-    const affiliateApi = 'https://member.kayadata.id/wp-json/sejoli/v1/affiliates';
-    const licenseApi = 'https://member.kayadata.id/wp-json/sejoli/v1/licenses';
+    const token = localStorage.getItem('jwt_token');
+    const dashboard = document.getElementById('dashboard');
+    const notLoggedIn = document.getElementById('not-logged-in');
+
+    if (!token) {
+      notLoggedIn.style.display = 'block';
+    } else {
+      dashboard.style.display = 'block';
+      loadData();
+    }
 
     async function loadData() {
-      const [affRes, licRes] = await Promise.all([
-        fetch(affiliateApi),
-        fetch(licenseApi)
-      ]);
+      try {
+        const [aff, lic] = await Promise.all([
+          fetch('https://member.kayadata.id/wp-json/sejoli/v1/affiliates', {
+            headers: { Authorization: 'Bearer ' + token }
+          }).then(res => res.json()),
+          fetch('https://member.kayadata.id/wp-json/sejoli/v1/licenses', {
+            headers: { Authorization: 'Bearer ' + token }
+          }).then(res => res.json())
+        ]);
 
-      const affData = await affRes.json();
-      const licData = await licRes.json();
-
-      if (affData.success) renderCommission(affData.data);
-      if (licData.success) renderLicenses(licData.data);
+        if (aff.success) renderCommission(aff.data);
+        if (lic.success) renderLicenses(lic.data);
+      } catch (e) {
+        alert('Gagal memuat data, silakan login ulang.');
+        localStorage.removeItem('jwt_token');
+        location.href = '/login.html';
+      }
     }
 
     function renderCommission(data) {
@@ -74,7 +97,9 @@
           <td>${row.created_at}</td>
           <td>Rp ${parseFloat(row.commission).toLocaleString('id-ID')}</td>
           <td><span class="badge ${row.status}">${row.status}</span></td>
-          <td><span class="badge ${row.paid_status === '1' ? 'paid' : 'unpaid'}">${row.paid_status === '1' ? 'Lunas' : 'Belum Lunas'}</span></td>
+          <td><span class="badge ${row.paid_status === '1' ? 'paid' : 'unpaid'}">
+            ${row.paid_status === '1' ? 'Lunas' : 'Belum Lunas'}
+          </span></td>
         `;
         tbody.appendChild(tr);
       });
@@ -94,8 +119,6 @@
         tbody.appendChild(tr);
       });
     }
-
-    loadData();
   </script>
 </body>
 </html>
