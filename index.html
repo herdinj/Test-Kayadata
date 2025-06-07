@@ -1,66 +1,146 @@
-<h3>Form Register</h3>
-<form id="register-form">
-  <input type="text" name="username" placeholder="Username" required />
-  <input type="email" name="email" placeholder="Email" required />
-  <input type="password" name="password" placeholder="Password (min 6 karakter)" required />
-  <button type="submit">Daftar</button>
-</form>
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <title>Login & Register - Kayadata</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background-color: #f4f4f4;
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    h1, h2 {
+      margin-bottom: 10px;
+    }
+    form {
+      background: #fff;
+      padding: 25px;
+      margin: 20px 0;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 400px;
+    }
+    input {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 16px;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      background: #2d89ef;
+      color: white;
+      border: none;
+      font-size: 16px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .error {
+      color: red;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
 
-<h3>Form Login</h3>
-<form id="login-form">
-  <input type="text" name="username" placeholder="Username" required />
-  <input type="password" name="password" placeholder="Password" required />
-  <button type="submit">Login</button>
-</form>
+  <h1>Kayadata</h1>
 
-<script>
-const api = 'https://member.kayadata.id/wp-json';
+  <form id="login-form">
+    <h2>Login</h2>
+    <div class="error" id="login-error" style="display:none;"></div>
+    <input type="text" name="username" placeholder="Username" required />
+    <input type="password" name="password" placeholder="Password" required />
+    <button type="submit">Login</button>
+  </form>
 
-document.getElementById('register-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const form = e.target;
-  const body = {
-    username: form.username.value,
-    email: form.email.value,
-    password: form.password.value
-  };
+  <form id="register-form">
+    <h2>Register</h2>
+    <div class="error" id="register-error" style="display:none;"></div>
+    <input type="text" name="username" placeholder="Username" required />
+    <input type="email" name="email" placeholder="Email" required />
+    <input type="password" name="password" placeholder="Password (min 6 karakter)" required />
+    <button type="submit">Daftar</button>
+  </form>
 
-  const res = await fetch(`${api}/kayadata/v1/register`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
+  <script>
+    const loginForm = document.getElementById('login-form');
+    const registerForm = document.getElementById('register-form');
+    const loginError = document.getElementById('login-error');
+    const registerError = document.getElementById('register-error');
+    const base = 'https://member.kayadata.id/wp-json';
 
-  const data = await res.json();
+    // LOGIN
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      loginError.style.display = 'none';
 
-  if (res.ok && data.success) {
-    alert('Registrasi sukses, auto login...');
-    await login(body.username, body.password);
-  } else {
-    alert(data.message || 'Registrasi gagal');
-  }
-});
+      const username = loginForm.username.value.trim();
+      const password = loginForm.password.value;
 
-document.getElementById('login-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const form = e.target;
-  await login(form.username.value, form.password.value);
-});
+      const res = await fetch(`${base}/jwt-auth/v1/token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
 
-async function login(username, password) {
-  const res = await fetch(`${api}/jwt-auth/v1/token`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password })
-  });
+      const data = await res.json();
 
-  const data = await res.json();
-  if (res.ok && data.token) {
-    localStorage.setItem('jwt_token', data.token);
-    alert('Login sukses!');
-    location.href = 'dashboard.html'; // sesuaikan
-  } else {
-    alert(data.message || 'Login gagal');
-  }
-}
-</script>
+      if (res.ok && data.token) {
+        localStorage.setItem('jwt_token', data.token);
+        window.location.href = '/dashboard.html';
+      } else {
+        loginError.textContent = data.message || 'Login gagal.';
+        loginError.style.display = 'block';
+      }
+    });
+
+    // REGISTER
+    registerForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      registerError.style.display = 'none';
+
+      const username = registerForm.username.value.trim();
+      const email = registerForm.email.value.trim();
+      const password = registerForm.password.value;
+
+      if (password.length < 6) {
+        registerError.textContent = 'Password minimal 6 karakter.';
+        registerError.style.display = 'block';
+        return;
+      }
+
+      const res = await fetch(`${base}/kayadata/v1/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, email, password })
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        // Auto-login setelah register
+        const loginRes = await fetch(`${base}/jwt-auth/v1/token`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const loginData = await loginRes.json();
+        if (loginData.token) {
+          localStorage.setItem('jwt_token', loginData.token);
+          window.location.href = '/dashboard.html';
+        }
+      } else {
+        registerError.textContent = data.message || 'Registrasi gagal.';
+        registerError.style.display = 'block';
+      }
+    });
+  </script>
+</body>
+</html>
